@@ -8,7 +8,7 @@ AN_HOUR_AGO = NOW - timedelta(hours=1)
 
 
 class HourlyCron(luigi.WrapperTask):
-    datehour = luigi.DateHourParameter(default=AN_HOUR_AGO)
+    date_hour = luigi.DateHourParameter(default=AN_HOUR_AGO)
 
     def requires(self):
         yield GetApiResult(**self.param_kwargs)
