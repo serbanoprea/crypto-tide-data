@@ -17,3 +17,4 @@ pipeline\.egg-info/
 
 \.envrc
 /main.py
+/*.cfg
