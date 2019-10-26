@@ -12,7 +12,7 @@ environment:
 install:
   - sh: pip install -r requirements.txt -q
   - sh: sudo chmod -x ./build.sh
-  - sh: ./build.sh
+  - sh: bash ./build.sh
 
 for:
 -
