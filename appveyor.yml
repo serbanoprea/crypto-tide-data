@@ -1,4 +1,5 @@
 image: ubuntu
+stack: python3
 
 version: 1.0.0.{build}
 
@@ -9,10 +10,9 @@ environment:
     secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
 
 install:
-  - sh: alias python=python3
-  - sh: pip3 install -r requirements.txt
-  - sh: pip3 install awscli
-  - sh: pip3 freeze
+  - sh: pip install -r requirements.txt
+  - sh: pip install awscli
+  - sh: pip freeze
   - sh: awscli configure set aws_access_key_id $AWS_ACCESS_KEY_ID
   - sh: awscli configure set secret_access_key $AWS_SECRET_ACCESS_KEY
   - sh: awscli configure set default.region eu-west-1
