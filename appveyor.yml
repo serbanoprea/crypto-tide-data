@@ -8,14 +8,15 @@ environment:
   AWS_SECRET_ACCESS_KEY:
     secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
 
-before_install:
-  - chmod +x build.sh
-
 install:
-  - sh: chmod -x ./build.sh
+  - sh: pip install -r requirements.txt
+  - sh: pip install awscli
+  - sh: pip freeze
+  - sh: awscli configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - sh: awscli configure set secret_access_key $AWS_SECRET_ACCESS_KEY
+  - sh: awscli configure set default.region eu-west-1
+  - sh: aws s3 cp --recursive ./ s3://crypto-deployment-code/{APPVEYOR_REPO_BRANCH}
 
-build_script:
-  - sh: ./build.sh
 
 for:
 -
