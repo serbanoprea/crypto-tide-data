@@ -4,7 +4,6 @@ docutils==0.15.2
 idna==2.8
 lockfile==0.12.2
 luigi==2.8.9
-numpy==1.17.3
 pandas==0.25.2
 python-daemon==2.1.2
 python-dateutil==2.8.0
