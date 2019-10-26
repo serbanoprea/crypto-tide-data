@@ -10,9 +10,9 @@ environment:
 
 install:
   - sh: alias python=python3
-  - sh: pip install -r requirements.txt
-  - sh: pip install awscli
-  - sh: pip freeze
+  - sh: pip3 install -r requirements.txt
+  - sh: pip3 install awscli
+  - sh: pip3 freeze
   - sh: awscli configure set aws_access_key_id $AWS_ACCESS_KEY_ID
   - sh: awscli configure set secret_access_key $AWS_SECRET_ACCESS_KEY
   - sh: awscli configure set default.region eu-west-1
