@@ -1,4 +1,4 @@
-pip install awscli
+pip install awscli -q
 pip freeze
 awscli configure set aws_access_key_id $AWS_ACCESS_KEY_ID
 awscli configure set secret_access_key $AWS_SECRET_ACCESS_KEY
