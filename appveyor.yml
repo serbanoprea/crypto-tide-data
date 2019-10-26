@@ -9,6 +9,7 @@ environment:
     secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
 
 install:
+  - sh: update-alternatives --install /usr/bin/python python /usr/bin/python3 10
   - sh: pip install -r requirements.txt
   - sh: pip install awscli
   - sh: pip freeze
