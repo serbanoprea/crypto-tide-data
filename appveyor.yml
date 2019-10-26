@@ -1,5 +1,5 @@
 image: ubuntu
-stack: python3
+stack: python 3.6
 
 version: 1.0.0.{build}
 
