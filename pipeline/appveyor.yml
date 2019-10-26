@@ -2,10 +2,14 @@ image: ubuntu
 
 version: 1.0.0.{build}
 
-install:
-  - pip install -r requirements.txt
-  # Show packages for debugging
-  - pip freeze
+environment:
+  AWS_ACCESS_KEY_ID:
+    secure: s4eDNMGAAUTE4383LMG6Hy7yRNtDlIEEYtxy7XsiGb4=
+  AWS_SECRET_ACCESS_KEY:
+    secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
+
+build_script:
+  - sh: ./build.sh
 
 for:
 -
