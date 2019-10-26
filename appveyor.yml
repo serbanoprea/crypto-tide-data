@@ -9,7 +9,7 @@ environment:
     secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
 
 install:
-  - bash: chmod -x ./build.sh
+  - sh: chmod -x ./build.sh
 
 build_script:
   - sh: ./build.sh
