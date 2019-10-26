@@ -3,7 +3,9 @@ import abc
 import luigi
 import pandas as pd
 import requests
-from luigi.contrib.s3 import S3FlagTarget
+from luigi.contrib.s3 import S3Target
+
+from pipeline.common.write import s3_write
 
 _config = luigi.configuration.get_config()
 _output_path = _config.get('api-calls', 'path')
@@ -34,20 +36,10 @@ class ApiCall(luigi.Task):
         self.write(data)
 
     def write(self, data):
-        output_types = {
-            'json': data.to_json,
-            'csv': data.to_csv,
-            'tsv': lambda x: data.to_csv(x, sep='\t'),
-            'parquet': data.to_parquet
-        }
-
-        if self.output_type not in output_types.keys():
-            raise Exception('Please provide a valid output type')
-
-        output_types[self.output_type](self._out_path)
+        s3_write(data, self.output_type, self._out_path)
 
     def output(self):
-        return S3FlagTarget(self._out_path)
+        return S3Target(self._out_path)
 
     @property
     def _out_path(self):

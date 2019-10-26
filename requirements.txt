@@ -11,3 +11,6 @@ pytz==2019.3
 requests
 six==1.12.0
 tornado==5.1.1
+botocore
+boto3
+s3fs
