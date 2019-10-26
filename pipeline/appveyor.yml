@@ -1,0 +1,31 @@
+image: ubuntu
+
+version: 1.0.0.{build}
+
+install:
+  - pip install -r requirements.txt
+  # Show packages for debugging
+  - pip freeze
+
+for:
+-
+  branches:
+    only:
+      - master
+
+  artifacts:
+    path: pipeline/*.py, pipeline/*/*.py
+    name: pipeline
+
+  deploy:
+    provider: S3
+    access_key_id:
+      secure: s4eDNMGAAUTE4383LMG6Hy7yRNtDlIEEYtxy7XsiGb4=
+    secret_access_key:
+      secure: bx7w89m6gjfpGpQhhD43bhRNq2pJIZG18jx8mc4LWLPDgG5Hqq3tvMq/x9dwQ6Ax
+    bucket: s3-crypto-deployment-code
+    region: eu-west-1
+    unzip: false
+    set_public: false
+    folder: pipeline/current
+    artifact: pipeline

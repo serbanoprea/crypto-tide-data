@@ -3,7 +3,7 @@ import abc
 import luigi
 import pandas as pd
 import requests
-
+from luigi.contrib.s3 import S3FlagTarget
 
 _config = luigi.configuration.get_config()
 _output_path = _config.get('api-calls', 'path')
@@ -47,11 +47,11 @@ class ApiCall(luigi.Task):
         output_types[self.output_type](self._out_path)
 
     def output(self):
-        return luigi.LocalTarget(self._out_path)
+        return S3FlagTarget(self._out_path)
 
     @property
     def _out_path(self):
-        path = _output_path.format(self.date_hour.date(), self.date_hour.hour)
+        path = _output_path.format(self.name, self.date_hour.date(), self.date_hour.hour)
         return '{}/{}.{}'.format(path, self.name, self.output_type)
 
     def _get_format(self):
