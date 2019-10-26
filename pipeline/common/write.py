@@ -21,7 +21,7 @@ def _get_bucket_key(path):
 
 
 def s3_write(df, output_format, path):
-    if output_format not in _string_write_formats.keys():
+    if output_format not in list(_string_write_formats.keys()) + list(_binary_write_formats.keys()):
         raise WriteException('Write format not supported')
 
     if output_format in _string_write_formats.keys():
