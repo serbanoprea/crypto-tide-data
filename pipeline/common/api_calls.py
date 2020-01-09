@@ -31,6 +31,10 @@ class ApiCall(luigi.Task):
         '''
         return df
 
+    @classmethod
+    def transform_raw(cls, data):
+        return data
+
     def run(self):
         data = self._read_data()
         self.write(data)
@@ -70,8 +74,9 @@ class ApiCall(luigi.Task):
         if api_return_format == 'json':
             response = requests.get(self.url).json()
             response = self._get_response(response)
+            response = self.transform_raw(response)
 
-            return pd.DataFrame(response)
+            return self.transform(pd.DataFrame(response))
 
         if api_return_format not in read_methods.keys():
             raise Exception('Please provide a valid API format')
