@@ -10,7 +10,7 @@ _string_write_formats = {
 }
 
 _binary_write_formats = {
-    'csv': lambda df, buffer: df.to_csv(buffer),
+    'parquet': lambda df, buffer: df.to_parquet(buffer),
 }
 
 
