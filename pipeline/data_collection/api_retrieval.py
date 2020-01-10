@@ -14,3 +14,7 @@ class GetApiResult(ApiCall):
 
     def transform_raw(self, data):
         return json_normalize(data)
+
+    def transform(self, df):
+        df['hour'] = self.date_hour.hour
+        return df
