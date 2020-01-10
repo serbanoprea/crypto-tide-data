@@ -5,7 +5,7 @@ from pandas.io.json import json_normalize
 _config = luigi.configuration.get_config()
 
 
-class GetApiResult(ApiCall):
+class CryptoWatchResult(ApiCall):
     date_hour = luigi.DateHourParameter()
     name = 'watch'
     path = 'result, rows'
