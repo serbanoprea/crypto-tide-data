@@ -2,6 +2,10 @@ import luigi
 import abc
 import pyodbc
 
+###
+# DOCS: https://github.com/mkleehammer/pyodbc/wiki/Connecting-to-SQL-Server-from-Windows
+###
+
 
 class _DatabaseQuery(luigi.Task):
     @abc.abstractproperty
