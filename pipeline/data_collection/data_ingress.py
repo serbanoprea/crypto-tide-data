@@ -6,7 +6,7 @@ from luigi.contrib.s3 import S3Target
 from luigi.tools.range import RangeHourly
 
 from pipeline.common.read import read_s3_df
-from pipeline.common.write import s3_write
+from pipeline.common.tasks import ReadableTask
 from pipeline.data_collection.api_retrieval import CryptoWatchResult
 
 _config = luigi.configuration.get_config()
@@ -14,22 +14,7 @@ _hourly_output_path = _config.get('api-calls', 'hourly-ingress')
 _daily_output_path = _config.get('api-calls', 'daily-ingress')
 
 
-class _ReadableTask(luigi.Task):
-    def output(self):
-        return S3Target(self._out_path)
-
-    def read(self):
-        return read_s3_df(self._out_path, 'parquet')
-
-    @abc.abstractproperty
-    def _out_path(self):
-        pass
-
-    def write(self, df):
-        s3_write(df, 'parquet', self._out_path)
-
-
-class HourlyIngress(_ReadableTask):
+class HourlyIngress(ReadableTask):
     date_hour = luigi.DateHourParameter()
 
     @abc.abstractproperty
@@ -45,8 +30,7 @@ class HourlyIngress(_ReadableTask):
         )
 
 
-
-class DailyIngress(_ReadableTask):
+class DailyIngress(ReadableTask):
     date = luigi.DateParameter()
 
     @abc.abstractproperty
@@ -89,4 +73,5 @@ class CryptoWatchDailyIngress(DailyIngress):
 
     def run(self):
         df = read_s3_df(_hourly_output_path.format(CryptoWatchHourlyIngress.name, self.date), 'parquet')
+        df['date'] = self.date
         self.write(df)
