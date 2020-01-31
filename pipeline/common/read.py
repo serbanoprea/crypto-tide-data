@@ -18,8 +18,7 @@ _supported_types = {
 }
 
 
-def read_s3_df(path, file_format, date=None,):
-    prefix = 's3://'
+def read_s3_df(path, file_format, date=None):
     read_method = _supported_types[file_format]
     if date:
         formatted_date = 'date={:%Y%d%m}'.format(date)
@@ -36,8 +35,8 @@ def _get_df(path, read_method):
     objects = _client.list_objects_v2(Bucket=url_path.netloc, Prefix='{}/'.format(url_path.path.strip('/')))
     objects = ['{}://{}/{}'.format(url_path.scheme, url_path.netloc, o['Key']) for o in objects['Contents']]
     df = None
-    for paths in _chunk_list(objects, 6):
-        df = read_method(*paths) if df is None else pd.concat([df, read_method(*paths)])
+    for path in objects:
+        df = read_method(path) if df is None else pd.concat([df, read_method(path)])
 
     return df
 
