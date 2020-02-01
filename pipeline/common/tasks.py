@@ -37,8 +37,6 @@ class ReadableTask(luigi.Task):
 
 
 class DatabaseQuery(luigi.Task):
-    type = 'hourly'
-
     @abc.abstractproperty
     def sql(self):
         pass
@@ -73,7 +71,11 @@ class DatabaseQuery(luigi.Task):
         mark_success(self._out_path)
 
     def output(self):
-        S3FlagTarget(self._out_path)
+        return S3FlagTarget(self._out_path)
+
+    def get_data(self):
+        data = self.requires().read()
+        return self.transform(data)
 
     @property
     def _out_path(self):
@@ -87,8 +89,6 @@ class DatabaseQuery(luigi.Task):
 
 
 class InsertQuery(DatabaseQuery):
-    date_hour = luigi.DateHourParameter()
-
     @abc.abstractproperty
     def table(self):
         pass
@@ -101,8 +101,7 @@ class InsertQuery(DatabaseQuery):
 
     @property
     def sql(self):
-        data = self.requires().read()
-        data = self.transform(data)
+        data = self.get_data()
         columns = [col.capitalize() for col in data.columns if ' ' not in col and ':' not in col]
         format_columns = '({})'.format(','.join(columns)).strip(',')
         template = 'INSERT INTO {table} {columns} VALUES'.format(table=self.table,
