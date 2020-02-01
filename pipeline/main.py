@@ -10,7 +10,7 @@ NOW = datetime.now()
 
 
 class HourlyCron(luigi.WrapperTask):
-    date_hour = luigi.DateHourParameter(default=NOW)
+    date_hour = luigi.DateHourParameter()
 
     def requires(self):
         yield CryptoWatchResult(**self.param_kwargs)
@@ -18,8 +18,14 @@ class HourlyCron(luigi.WrapperTask):
 
 
 class DailyCron(luigi.WrapperTask):
-    date = luigi.DateParameter(default=NOW - timedelta(days=1))
+    date = luigi.DateParameter()
 
     def requires(self):
         yield CryptoWatchDailyIngress(**self.param_kwargs)
         yield DatabaseDaily(**self.param_kwargs)
+
+
+class CryptoTideCron(luigi.WrapperTask):
+    def requires(self):
+        yield HourlyCron(date_hour=NOW)
+        yield DailyCron(date=NOW - timedelta(days=1))
