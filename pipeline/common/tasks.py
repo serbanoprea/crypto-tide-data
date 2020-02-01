@@ -33,6 +33,8 @@ class ReadableTask(luigi.Task):
 
 
 class DatabaseQuery(luigi.Task):
+    number_of_batches = 10
+
     @abc.abstractproperty
     def sql(self):
         pass
@@ -85,8 +87,6 @@ class InsertQuery(DatabaseQuery):
     @abc.abstractproperty
     def dependency(self):
         pass
-
-    number_of_batches = 10
 
     @property
     def sql(self):

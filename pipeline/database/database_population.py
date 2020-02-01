@@ -1,4 +1,5 @@
 import luigi
+import numpy as np
 
 from pipeline.common.read import read_sql_df
 from pipeline.common.tasks import DatabaseQuery, InsertQuery
@@ -28,12 +29,16 @@ class UpdateCoinsRank(DatabaseQuery):
 
     @property
     def _update_current_rank(self):
-        for row in self.get_data().values:
-            rank, _, symbol = row
-            yield (
-                "UPDATE {table} SET Rank={current_rank} WHERE Symbol='{symbol}'"
-                .format(table=self.table, current_rank=rank, symbol=symbol)
-            )
+        for batch in np.array_split(self.get_data().values, self.number_of_batches):
+            update_str = ''
+            for row in batch:
+                rank, _, symbol = row
+                update_str += (
+                    "UPDATE {table} SET Rank={current_rank} WHERE Symbol='{symbol}';\n"
+                    .format(table=self.table, current_rank=rank, symbol=symbol)
+                )
+
+            yield update_str
 
     def requires(self):
         return CryptoWatchHourlyIngress(date_hour=self.date_hour)
