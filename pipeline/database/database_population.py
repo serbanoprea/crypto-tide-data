@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 
 import luigi
 import numpy as np
+from luigi.tools.range import RangeHourly
 
 from pipeline.common.read import read_sql_df
 from pipeline.common.tasks import DatabaseQuery, InsertQuery
@@ -74,3 +75,23 @@ class InsertHourlyValues(InsertQuery):
     @property
     def dependency(self):
         return CryptoWatchHourlyIngress(date_hour=self.date_hour)
+
+
+class DatabaseHourly(luigi.WrapperTask):
+    date_hour = luigi.DateHourParameter()
+
+    def requires(self):
+        yield InsertHourlyValues(**self.param_kwargs)
+        yield HourlyValuesCleanup(**self.param_kwargs)
+        yield UpdateCoinsRank(**self.param_kwargs)
+
+
+class DatabaseDaily(luigi.WrapperTask):
+    date = luigi.DateParameter()
+
+    def requires(self):
+        return RangeHourly(
+            of=DatabaseHourly,
+            start=datetime.combine(self.date, time.min),
+            stop=datetime.combine(self.date + timedelta(days=1), time.min)
+        )
