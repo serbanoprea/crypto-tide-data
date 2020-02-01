@@ -1,13 +1,23 @@
 from urllib import parse
 
 import boto3
+import luigi
 import pandas as pd
+import pyodbc
 import s3fs
 
 _tsv = lambda x: pd.read_csv(x, sep='\t', encoding='utf-8')
 _csv = lambda x: pd.read_csv(x, encoding='utf-8')
 _fs = s3fs.S3FileSystem(anon=False)
 _client = boto3.client('s3')
+
+_config = luigi.configuration.get_config()
+
+_db_server = _config.get('database', 'server')
+_database = _config.get('database', 'database')
+_user = _config.get('database', 'user')
+_password = _config.get('database', 'password')
+_coins_table = _config.get('database', 'coins-table')
 
 
 _supported_types = {
@@ -28,6 +38,51 @@ def read_s3_df(path, file_format, date=None):
         return read_method(path)
     else:
         return _get_df(path, read_method)
+
+
+def database_connection():
+    connection_string = (
+            'DRIVER={ODBC Driver 17 for SQL Server}' +
+            ';SERVER={server};DATABASE={database};UID={user};PWD={password}'
+            .format(server=_db_server, database=_database,
+                    user=_user, password=_password)
+    )
+
+    return pyodbc.connect(connection_string)
+
+
+def read_sql_df(table, columns, query='SELECT * FROM {table}', **kwargs):
+    connection = database_connection()
+    all_parameters = dict(**{'table': table}, **kwargs)
+    query = query.format(**all_parameters)
+    all_vals = connection.execute(query).fetchall()
+    data = []
+    for value in all_vals:
+        data.append(dict(zip(columns, value)))
+
+    return pd.DataFrame(data)
+
+
+def pandas_cols_to_sql(columns):
+    cols = []
+    _sql_keywords = ['rank', 'symbol']
+
+    for col in columns:
+        if ':' in col:
+            continue
+
+        if '.' not in col and col.lower() not in _sql_keywords and len(col.split('_')) == 1:
+            cols.append(col.capitalize())
+        elif len(col.split('_')) > 1:
+            cols.append(_multi_word_column(col))
+        elif '.' in col or col in _sql_keywords:
+            cols.append('[{}]'.format(col.capitalize()))
+
+    return cols
+
+
+def _multi_word_column(col):
+    return ''.join(word.capitalize() for word in col.split('_'))
 
 
 def _get_df(path, read_method):

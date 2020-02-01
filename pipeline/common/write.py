@@ -1,8 +1,12 @@
 from collections import namedtuple
 from io import StringIO, BytesIO
+from datetime import datetime, date
 
 import boto3
+import luigi
 import urllib3
+
+_s3_resource = boto3.resource('s3')
 
 _string_write_formats = {
     'csv': lambda df, buffer: df.to_csv(buffer),
@@ -32,9 +36,15 @@ def s3_write(df, output_format, path):
         buffer = BytesIO()
 
     combined_write_formats[output_format](df, buffer)
-    s3_resource = boto3.resource('s3')
-    url = _get_bucket_key(path)
-    s3_resource.Object(url.bucket, url.object_key).put(Body=buffer.getvalue())
+    bucket, key = _get_bucket_key(path)
+    _s3_resource.Object(bucket, key).put(Body=buffer.getvalue())
+
+
+def mark_success(path):
+    bucket, key = _get_bucket_key(path)
+    key += '_SUCCESS'
+    buffer = StringIO('')
+    _s3_resource.Object(bucket, key).put(buffer.getvalue())
 
 
 class WriteException(Exception):
