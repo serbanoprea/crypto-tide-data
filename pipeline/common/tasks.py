@@ -20,6 +20,8 @@ _coins_table = _config.get('database', 'coins-table')
 _hourly_success_token_path = _config.get('misc', 'hourly-success-tokens')
 _daily_success_token_path = _config.get('misc', 'daily-success-tokens')
 
+_sql_keywords = ['rank', 'symbol']
+
 
 class ReadableTask(luigi.Task):
     def output(self):
@@ -102,11 +104,15 @@ class InsertQuery(DatabaseQuery):
     @property
     def sql(self):
         data = self.get_data()
-        columns = [col.capitalize() for col in data.columns if ' ' not in col and ':' not in col]
+        columns = [col.capitalize()
+                   if '.' not in col and col.lower() not in _sql_keywords
+                   else '[{}]'.format(col.capitalize())
+                   for col in data.columns
+                   if ' ' not in col and ':' not in col]
         format_columns = '({})'.format(','.join(columns)).strip(',')
         template = 'INSERT INTO {table} {columns} VALUES'.format(table=self.table,
                                                                  columns=format_columns)
-        for batch in np.array_split(data.values, self.number_of_batches):
+        for batch in np.array_split(data[[c for c in data.columns if ':' not in c]].values, self.number_of_batches):
             yield '{template} {values}'.format(
                 template=template,
                 values=','.join(self._list_to_insert(row) for row in batch).strip(',')
