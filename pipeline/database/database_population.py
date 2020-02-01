@@ -1,28 +1,13 @@
-import luigi
-import abc
-import pyodbc
-
-###
-# DOCS: https://github.com/mkleehammer/pyodbc/wiki/Connecting-to-SQL-Server-from-Windows
-###
+from pipeline.common.tasks import InsertQuery
+from pipeline.data_collection.data_ingress import CryptoWatchHourlyIngress
 
 
-class _DatabaseQuery(luigi.Task):
-    @abc.abstractproperty
-    def database(self):
-        pass
+class InsertCoins(InsertQuery):
+    table = 'Coins'
 
-    @abc.abstractproperty
-    def table(self):
-        pass
-
-    @abc.abstractproperty
-    def sql(self):
-        pass
+    def transform(self, df):
+        return df[['rank', 'name', 'symbol']]
 
     @property
-    def connection(self):
-        connection_string = '''
-            DRIVER={ODBC Driver 17 for SQL Server};SERVER=test;DATABASE=test;UID=user;PWD=password
-        '''
-        return pyodbc.connect(connection_string)
+    def dependency(self):
+        return CryptoWatchHourlyIngress(date_hour=self.date_hour)
