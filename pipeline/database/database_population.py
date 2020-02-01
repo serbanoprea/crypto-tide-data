@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import luigi
 import numpy as np
 
@@ -8,6 +10,7 @@ from pipeline.data_collection.data_ingress import CryptoWatchHourlyIngress
 _config = luigi.configuration.get_config()
 _coins_table = _config.get('database', 'coins-table')
 _values_table = _config.get('database', 'values-table')
+_window_period = _config.getint('database', 'window-period')
 
 
 class UpdateCoinsRank(DatabaseQuery):
@@ -42,6 +45,18 @@ class UpdateCoinsRank(DatabaseQuery):
 
     def requires(self):
         return CryptoWatchHourlyIngress(date_hour=self.date_hour)
+
+
+class HourlyValuesCleanup(DatabaseQuery):
+    date_hour = luigi.DateHourParameter()
+
+    @property
+    def sql(self):
+        date_limit = self.date_hour.date() - timedelta(days=_window_period)
+        return (
+            "DELETE FROM {table} WHERE Date <= CONVERT(DATE, '{date:%Y-%m-%d}') AND Hour <= {hour}"
+            .format(table=_values_table, date=date_limit, hour=self.date_hour.hour)
+        )
 
 
 class InsertHourlyValues(InsertQuery):
