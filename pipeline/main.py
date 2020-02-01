@@ -4,7 +4,7 @@ import luigi
 
 from pipeline.data_collection.api_retrieval import CryptoWatchResult
 from pipeline.data_collection.data_ingress import CryptoWatchDailyIngress
-from pipeline.database.database_population import DatabaseHourly
+from pipeline.database.database_population import DatabaseHourly, DatabaseDaily
 
 NOW = datetime.now()
 
@@ -22,3 +22,4 @@ class DailyCron(luigi.WrapperTask):
 
     def requires(self):
         yield CryptoWatchDailyIngress(**self.param_kwargs)
+        yield DatabaseDaily(**self.param_kwargs)
