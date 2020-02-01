@@ -1,5 +1,6 @@
 import luigi
 
+from pipeline.common.read import read_sql_df
 from pipeline.common.tasks import DatabaseQuery, InsertQuery
 from pipeline.data_collection.data_ingress import CryptoWatchHourlyIngress
 
@@ -44,9 +45,11 @@ class InsertHourlyValues(InsertQuery):
     table = _values_table
 
     def transform(self, df):
-        df = df[[c for c in df.columns if c not in ['name', 'id']]]
-        df['Date'] = '{:%Y-%m-%d}'.format(self.date_hour.date())
-        return df
+        coins = read_sql_df(_coins_table, ['coin_id', 'rank', 'previous_rank', 'symbol', 'name'])
+        df = df[[c for c in df.columns if c not in ['name', 'id'] and ':' not in c]]
+        complete_dataset = df.merge(coins[['symbol', 'coin_id']], on='symbol', how='inner')
+        complete_dataset['Date'] = '{:%Y-%m-%d}'.format(self.date_hour.date())
+        return complete_dataset
 
     @property
     def dependency(self):

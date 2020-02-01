@@ -4,18 +4,12 @@ import types
 
 import luigi
 import numpy as np
-import pyodbc
 from luigi.contrib.s3 import S3Target, S3FlagTarget
 
-from pipeline.common.read import read_s3_df
+from pipeline.common.read import read_s3_df, database_connection, pandas_cols_to_sql
 from pipeline.common.write import s3_write, mark_success
 
 _config = luigi.configuration.get_config()
-_db_server = _config.get('database', 'server')
-_database = _config.get('database', 'database')
-_user = _config.get('database', 'user')
-_password = _config.get('database', 'password')
-_coins_table = _config.get('database', 'coins-table')
 
 _hourly_success_token_path = _config.get('misc', 'hourly-success-tokens')
 _daily_success_token_path = _config.get('misc', 'daily-success-tokens')
@@ -45,14 +39,7 @@ class DatabaseQuery(luigi.Task):
 
     @property
     def connection(self):
-        connection_string = (
-                'DRIVER={ODBC Driver 17 for SQL Server}' +
-                ';SERVER={server};DATABASE={database};UID={user};PWD={password}'
-                .format(server=_db_server, database=_database,
-                        user=_user, password=_password)
-        )
-
-        return pyodbc.connect(connection_string)
+        return database_connection()
 
     @classmethod
     def transform(cls, df):
@@ -60,7 +47,7 @@ class DatabaseQuery(luigi.Task):
 
     @staticmethod
     def _list_to_insert(in_list):
-        return list(in_list).__repr__().replace('[', '(').replace(']', ')')
+        return tuple(in_list).__repr__()
 
     def run(self):
         sql = self.sql
@@ -104,11 +91,7 @@ class InsertQuery(DatabaseQuery):
     @property
     def sql(self):
         data = self.get_data()
-        columns = [col.capitalize()
-                   if '.' not in col and col.lower() not in _sql_keywords
-                   else '[{}]'.format(col.capitalize())
-                   for col in data.columns
-                   if ' ' not in col and ':' not in col]
+        columns = pandas_cols_to_sql(data.columns)
         format_columns = '({})'.format(','.join(columns)).strip(',')
         template = 'INSERT INTO {table} {columns} VALUES'.format(table=self.table,
                                                                  columns=format_columns)
