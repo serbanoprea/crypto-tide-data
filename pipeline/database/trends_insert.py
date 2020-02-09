@@ -44,7 +44,7 @@ class InsertHourlyTrends(DatabaseQuery):
             Groups AS ( -- Represents consecutive increases
                 SELECT
                     Differences.*,
-                    SUM(CASE WHEN Price < PreviousPrice THEN 1 ELSE 0 END) OVER (ORDER BY Date, Hour) AS HourlyPriceGroup
+                    SUM(CASE WHEN Price < PreviousPrice OR Price = PreviousPrice THEN 1 ELSE 0 END) OVER (ORDER BY Date, Hour) AS HourlyPriceGroup
                 FROM Differences
             ),
             Behavours AS (
