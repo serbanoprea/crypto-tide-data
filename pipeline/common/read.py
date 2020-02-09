@@ -51,7 +51,7 @@ def database_connection():
     return pyodbc.connect(connection_string)
 
 
-def read_sql_df(table, columns, query='SELECT * FROM {table}', **kwargs):
+def read_sql_df(columns, table='Coins', query='SELECT * FROM {table}', **kwargs):
     connection = database_connection()
     all_parameters = dict(**{'table': table}, **kwargs)
     query = query.format(**all_parameters)

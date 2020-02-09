@@ -103,3 +103,13 @@ class InsertQuery(DatabaseQuery):
 
     def requires(self):
         return self.dependency
+
+
+class TruncateTableQuery(DatabaseQuery):
+    @abc.abstractproperty
+    def table(self):
+        pass
+
+    @property
+    def sql(self):
+        return 'DELETE FROM {table}'.format(table=self.table)
