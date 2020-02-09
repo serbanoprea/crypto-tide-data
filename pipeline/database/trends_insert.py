@@ -184,5 +184,5 @@ class InsertDailyTrends(DatabaseQuery):
     def sql(self):
         df = read_sql_df(['coin_id', 'previous_rank', 'rank', 'symbol'])
         for coin in df['symbol'].values:
-            yield self.sql_template.format(coin=coin, hourly_trends_table=_daily_trends_table,
+            yield self.sql_template.format(coin=coin, daily_trends_table=_daily_trends_table,
                                            values_table=_values_table)
