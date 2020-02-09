@@ -2,6 +2,7 @@ import luigi
 
 from pipeline.common.read import read_sql_df
 from pipeline.common.tasks import DatabaseQuery, TruncateTableQuery
+from pipeline.database.database_population import DatabaseHourly, DatabaseDaily
 
 _config = luigi.configuration.get_config()
 _values_table = _config.get('database', 'values-table')
@@ -18,7 +19,8 @@ class InsertHourlyTrends(DatabaseQuery):
     date_hour = luigi.DateHourParameter()
 
     def requires(self):
-        return EmptyHourlyTrends(date_hour=self.date_hour)
+        yield EmptyHourlyTrends(date_hour=self.date_hour)
+        yield DatabaseHourly(date_hour=self.date_hour)
 
     sql_template = """
          WITH InitialTable AS (
@@ -84,7 +86,8 @@ class InsertDailyTrends(DatabaseQuery):
     date = luigi.DateParameter()
 
     def requires(self):
-        return EmptyDailyTrends(date=self.date)
+        yield EmptyDailyTrends(date=self.date)
+        yield DatabaseDaily(date=self.date)
 
     sql_template = """
      WITH PriceHistogram AS (
