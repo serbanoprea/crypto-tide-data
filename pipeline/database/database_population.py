@@ -66,7 +66,7 @@ class InsertHourlyValues(InsertQuery):
     table = _values_table
 
     def transform(self, df):
-        coins = read_sql_df(_coins_table, ['coin_id', 'rank', 'previous_rank', 'symbol', 'name'])
+        coins = read_sql_df(['coin_id', 'rank', 'previous_rank', 'symbol', 'name'], table=_coins_table)
         df = df[[c for c in df.columns if c not in ['name', 'id'] and ':' not in c]]
         complete_dataset = df.merge(coins[['symbol', 'coin_id']], on='symbol', how='inner')
         complete_dataset['Date'] = '{:%Y-%m-%d}'.format(self.date_hour.date())
