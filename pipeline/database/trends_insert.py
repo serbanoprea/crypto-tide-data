@@ -14,13 +14,15 @@ class EmptyHourlyTrends(TruncateTableQuery):
     date_hour = luigi.DateHourParameter()
     table = _hourly_trends_table
 
+    def requires(self):
+        return DatabaseHourly(date_hour=self.date_hour)
+
 
 class InsertHourlyTrends(DatabaseQuery):
     date_hour = luigi.DateHourParameter()
 
     def requires(self):
-        yield EmptyHourlyTrends(date_hour=self.date_hour)
-        yield DatabaseHourly(date_hour=self.date_hour)
+        return EmptyHourlyTrends(date_hour=self.date_hour)
 
     sql_template = """
          WITH InitialTable AS (
@@ -81,13 +83,15 @@ class EmptyDailyTrends(TruncateTableQuery):
     date = luigi.DateParameter()
     table = _daily_trends_table
 
+    def requires(self):
+        return DatabaseDaily(date=self.date)
+
 
 class InsertDailyTrends(DatabaseQuery):
     date = luigi.DateParameter()
 
     def requires(self):
-        yield EmptyDailyTrends(date=self.date)
-        yield DatabaseDaily(date=self.date)
+        return EmptyDailyTrends(date=self.date)
 
     sql_template = """
      WITH PriceHistogram AS (
