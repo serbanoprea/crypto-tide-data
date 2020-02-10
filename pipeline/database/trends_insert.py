@@ -51,11 +51,8 @@ class InsertHourlyTrends(DatabaseQuery):
                 SELECT
                     Groups.*,
                     ROW_NUMBER() OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour) AS ConsecutiveIncreases,
-                    (
-                        ABS(MAX(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour) - MIN(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour)) /
-                        (MAX(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour) + MIN(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour)/2)
-                    ) AS PercentageIncrease,
-                    (Price / PreviousPrice * 100 - 100) AS HourlyChange
+                    (MAX(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour) / MIN(Price) OVER (PARTITION BY HourlyPriceGroup ORDER BY Date, Hour) * 100 - 100) AS PercentageIncrease,
+                    (Price / PreviousPrice * 100 - 100) AS OverallChange
                 FROM Groups
             )
             
