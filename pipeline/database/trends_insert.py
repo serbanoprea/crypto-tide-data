@@ -64,9 +64,9 @@ class InsertHourlyTrends(DatabaseQuery):
                 Price,
                 ConsecutiveIncreases,
                 PercentageIncrease,
-                HourlyChange
+                OverallChange
             FROM Behavours
-            WHERE HourlyChange IS NOT NULL;    
+            WHERE OverallChange IS NOT NULL;    
     """
 
     @property
