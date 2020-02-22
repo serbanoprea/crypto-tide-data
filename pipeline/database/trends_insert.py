@@ -27,6 +27,7 @@ class InsertHourlyTrends(DatabaseQuery):
     sql_template = """
          WITH InitialTable AS (
                  SELECT 
+				     CoinId,
                      Symbol,
                      Date,
                      Hour,
@@ -57,14 +58,15 @@ class InsertHourlyTrends(DatabaseQuery):
             )
             
             INSERT INTO {hourly_trends_table}
-            SELECT 
+            SELECT
                 Symbol,
                 Date,
                 Hour,
                 Price,
                 ConsecutiveIncreases,
                 PercentageIncrease,
-                OverallChange
+                OverallChange,
+                CoinId
             FROM Behavours
             WHERE OverallChange IS NOT NULL;    
     """
@@ -93,6 +95,7 @@ class InsertDailyTrends(DatabaseQuery):
     sql_template = """
      WITH PriceHistogram AS (
             SELECT DISTINCT
+                CoinId,
                 Symbol AS Coin,
                 Date AS GroupDate,
                 PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY Price) OVER (PARTITION BY Date) AS Price25Perc,
@@ -113,6 +116,7 @@ class InsertDailyTrends(DatabaseQuery):
         ),
         CompleteInitTable AS (
             SELECT
+                CoinId,
                 Symbol,
                 Date,
                 MaxPrice,
@@ -180,7 +184,8 @@ class InsertDailyTrends(DatabaseQuery):
             MedianMaxChange,
             ConsecutiveSmallChange,
             ConsecutiveMediumChange,
-            ConsecutiveHighChange
+            ConsecutiveHighChange,
+            CoinId
         FROM Behavours;    
     """
 
