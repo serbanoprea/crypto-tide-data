@@ -43,7 +43,7 @@ class InsertPopulationScore(DatabaseQuery):
                 SELECT Initial.*,
                     AVG(AverageChange) OVER(PARTITION BY MockGroup) AS OverallAverage,
                     PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY AverageChange) OVER (PARTITION BY MockGroup) AS MedianChange,
-                    (AverageChange / StDevChange) AS OverallScore
+                    (StDevChange / AverageChange) AS OverallScore
                 FROM Initial
             ),
             PrepareData AS (
@@ -51,7 +51,8 @@ class InsertPopulationScore(DatabaseQuery):
                     PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY OverallScore) OVER (PARTITION BY MockGroup) AS Perc25Score,
                     PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY OverallScore) OVER (PARTITION BY MockGroup) AS MedianScore,
                     PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY OverallScore) OVER (PARTITION BY MockGroup) AS Perc75Score,
-                    MAX(OverallScore) OVER (PARTITION BY MockGroup) AS MaxScore
+                    MAX(OverallScore) OVER (PARTITION BY MockGroup) AS MaxScore,
+                    MIN(OverallScore) OVER (PARTITION BY MockGroup) AS MinScore
                 FROM Aggregations
             )
             
@@ -63,6 +64,11 @@ class InsertPopulationScore(DatabaseQuery):
                 OverallScore,
                 (CASE WHEN OverallScore > Perc25Score THEN 1 ELSE 0 END) AS HigherThan25Perc,
                 (CASE WHEN OverallScore > MedianScore THEN 1 ELSE 0 END) AS HigherThanMedian,
-                (CASE WHEN OverallScore > Perc75Score THEN 1 ELSE 0 END) AS HigherThan75Perc
+                (CASE WHEN OverallScore > Perc75Score THEN 1 ELSE 0 END) AS HigherThan75Perc,
+                (CASE WHEN OverallScore = MinScore THEN 1 ELSE 0 END) AS PopulationMinimum
             FROM PrepareData ORDER BY Date;
         """.format(hourly_trends=_hourly_trends_table, population_scores=_population_scores)
+
+class InsertCoinVolatility(DatabaseQuery):
+    date = luigi.DateParameter()
+
