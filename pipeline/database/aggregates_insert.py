@@ -8,14 +8,14 @@ from pipeline.database.trends_insert import InsertHourlyTrends
 
 
 _config = luigi.configuration.get_config()
-_population_scores = _config.get('database', 'population-scores-table')
+_population_aggregates = _config.get('database', 'population-aggregates-table')
 _hourly_trends_table = _config.get('database', 'hourly-trends-table')
 _coin_aggregates_table = _config.get('database', 'coin-aggregates-table')
 
 
 class EmptyPopulationAggregates(TruncateTableQuery):
     date = luigi.DateHourParameter()
-    table = _population_scores
+    table = _population_aggregates
 
     def requires(self):
         return RangeDaily(
@@ -68,7 +68,7 @@ class InsertPopulationAggregates(DatabaseQuery):
                 (CASE WHEN OverallScore > Perc75Score THEN 1 ELSE 0 END) AS HigherThan75Perc,
                 (CASE WHEN OverallScore = MinScore THEN 1 ELSE 0 END) AS PopulationMinimum
             FROM PrepareData ORDER BY Date;
-        """.format(hourly_trends=_hourly_trends_table, population_scores=_population_scores)
+        """.format(hourly_trends=_hourly_trends_table, population_scores=_population_aggregates)
 
 
 class EmptyCoinAggregates(TruncateTableQuery):
@@ -88,7 +88,7 @@ class InsertCoinAggregates(DatabaseQuery):
     @property
     def sql(self):
         return """
-            WITH DayPerformance AS (
+                WITH DayPerformance AS (
                     SELECT
                         CoinId,
                         Symbol,
@@ -113,8 +113,7 @@ class InsertCoinAggregates(DatabaseQuery):
                     WHERE DATEADD(HOUR, Hour, CAST(Date as datetime)) >= DATEADD(DAY, -7, GETDATE())
                     GROUP BY CoinId, Symbol
                 ),
-                PopulationAggregation AS (
-                    
+                PopulationAggregation AS (	
                 SELECT
                     DayPerformance.*,
                     WeekPerformance.AverageWeekChange,
@@ -156,6 +155,7 @@ class InsertCoinAggregates(DatabaseQuery):
                 SELECT
                     CoinId,
                     Symbol,
+                
                     AverageDayChange,
                     SumDayChange,
                     StDevDayChange,
@@ -163,7 +163,7 @@ class InsertCoinAggregates(DatabaseQuery):
                     AverageWeekChange,
                     SumWeekChange,
                     WeekRecords,
-                    StdevWeekChange,
+                    StDevWeekChange,
                     WeekVolatility,
                     DayVolatility,
                 
@@ -185,10 +185,12 @@ class InsertCoinAggregates(DatabaseQuery):
                     HigherVolatilityMedianWeek,
                     HigherVolatilityThan75PercWeek,
                     HigherVolatilityThan25PercWeek,
-                    HigherVolatilityMedianWeek,
+                
                     HigherThanAverageVolatilityWeek,
-                    MinWeekVolatility
+                    MinWeekVolatility,
+                    MaxWeekVolatility,
+                    MinDayVolatility,
+                    MaxDayVolatility
                 FROM PopulationAggregation
-                ORDER BY DayVolatility DESC;
         """.format(coin_aggregates=_coin_aggregates_table, hourly_trends=_hourly_trends_table)
 

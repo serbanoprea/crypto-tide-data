@@ -4,6 +4,7 @@ import luigi
 
 from pipeline.data_collection.api_retrieval import CryptoWatchResult
 from pipeline.data_collection.data_ingress import CryptoWatchDailyIngress
+from pipeline.database.aggregates_insert import InsertPopulationAggregates, InsertCoinAggregates
 from pipeline.database.database_population import DatabaseHourly, DatabaseDaily
 from pipeline.database.trends_insert import InsertDailyTrends, InsertHourlyTrends
 
@@ -17,6 +18,7 @@ class HourlyCron(luigi.WrapperTask):
         yield CryptoWatchResult(**self.param_kwargs)
         yield DatabaseHourly(**self.param_kwargs)
         yield InsertHourlyTrends(**self.param_kwargs)
+        yield InsertCoinAggregates(**self.param_kwargs)
 
 
 class DailyCron(luigi.WrapperTask):
@@ -26,6 +28,7 @@ class DailyCron(luigi.WrapperTask):
         yield CryptoWatchDailyIngress(**self.param_kwargs)
         yield DatabaseDaily(**self.param_kwargs)
         yield InsertDailyTrends(**self.param_kwargs)
+        yield InsertPopulationAggregates(**self.param_kwargs)
 
 
 class CryptoTideCron(luigi.WrapperTask):
