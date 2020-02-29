@@ -115,7 +115,7 @@ class TruncateTableQuery(DatabaseQuery):
         return 'DELETE FROM {table}'.format(table=self.table)
 
 
-class OutputDatabaseTask(luigi.Task, ReadableTask):
+class OutputDatabaseTask(luigi.Task):
     @abc.abstractproperty
     def table(self):
         pass
@@ -128,7 +128,8 @@ class OutputDatabaseTask(luigi.Task, ReadableTask):
     def columns(self):
         pass
 
-    _out_path = output_path
+    def read(self):
+        return read_s3_df(self.output_path, self.output_format)
 
     output_format = 'parquet'
 
