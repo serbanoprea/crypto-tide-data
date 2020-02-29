@@ -1,9 +1,7 @@
 from collections import namedtuple
 from io import StringIO, BytesIO
-from datetime import datetime, date
 
 import boto3
-import luigi
 import urllib3
 
 _s3_resource = boto3.resource('s3')
@@ -35,7 +33,7 @@ def s3_write(df, output_format, path):
     else:
         buffer = BytesIO()
 
-    combined_write_formats[output_format](df, buffer)
+    combined_write_formats[output_format](df.reset_index(), buffer)
     bucket, key = _get_bucket_key(path)
     _s3_resource.Object(bucket, key).put(Body=buffer.getvalue())
 

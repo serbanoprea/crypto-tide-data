@@ -1,3 +1,4 @@
+import re
 from urllib import parse
 
 import boto3
@@ -79,6 +80,20 @@ def pandas_cols_to_sql(columns):
             cols.append('[{}]'.format(col.capitalize()))
 
     return cols
+
+
+def get_table_columns(table):
+    connection = database_connection()
+    all_vals = connection.execute('exec sp_columns {table}'.format(table=table)).fetchall()
+    return [re.sub(r'(?<!^)(?=[A-Z])', '_', x[3]).lower() for x in all_vals]
+
+
+def generate_analytics_path(group, name, date, hour=False):
+    hourly_template = _config.get('aggregations', 'hourly-output-path')
+    daily_template = _config.get('aggregations', 'daily-output-path')
+    hourly = not type(hour) == bool
+    template = daily_template if not hourly else hourly_template
+    return template.format(group, name, date, name) if not hourly else template.format(group, name, date, hour, name)
 
 
 def _multi_word_column(col):
