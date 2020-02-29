@@ -69,6 +69,7 @@ class InsertHourlyValues(InsertQuery):
         coins = read_sql_df(['coin_id', 'rank', 'previous_rank', 'symbol', 'name'], table=_coins_table)
         complete_dataset = df.merge(coins[['symbol', 'coin_id']], on='symbol', how='inner')
         complete_dataset = complete_dataset.drop(['level_0', 'Unnamed: 0', 'index', 'name', 'id'], axis=1)
+
         complete_dataset['Date'] = '{:%Y-%m-%d}'.format(self.date_hour.date())
         return complete_dataset
 

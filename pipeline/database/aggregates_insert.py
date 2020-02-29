@@ -192,5 +192,6 @@ class InsertCoinAggregates(DatabaseQuery):
                     MinDayVolatility,
                     MaxDayVolatility
                 FROM PopulationAggregation
+                WHERE StDevDayChange IS NOT NULL;
         """.format(coin_aggregates=_coin_aggregates_table, hourly_trends=_hourly_trends_table)
 

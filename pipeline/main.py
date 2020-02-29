@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import luigi
+from luigi.tools.range import RangeHourly
 
 from pipeline.data_aggregation.output_db_aggregates import DailyDbAggregatesOutput, HourlyDbAggregatesOutput
 from pipeline.data_collection.api_retrieval import CryptoWatchResult
@@ -38,3 +39,12 @@ class CryptoTideCron(luigi.WrapperTask):
     def requires(self):
         yield HourlyCron(date_hour=NOW)
         yield DailyCron(date=NOW - timedelta(days=1))
+
+
+class MockBackfillTask(luigi.WrapperTask):
+    def requires(self):
+        return RangeHourly(
+            of=self.dependency,
+            start=datetime.combine(self.date, time.min),
+            stop=datetime.combine(self.date + timedelta(days=1), time.min)
+        )
