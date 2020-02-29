@@ -6,7 +6,7 @@ import luigi
 import numpy as np
 from luigi.contrib.s3 import S3Target, S3FlagTarget
 
-from pipeline.common.read import read_s3_df, database_connection, pandas_cols_to_sql
+from pipeline.common.read import read_s3_df, database_connection, pandas_cols_to_sql, read_sql_df
 from pipeline.common.write import s3_write, mark_success
 
 _config = luigi.configuration.get_config()
@@ -113,3 +113,26 @@ class TruncateTableQuery(DatabaseQuery):
     @property
     def sql(self):
         return 'DELETE FROM {table}'.format(table=self.table)
+
+
+class OutputDatabaseTask(luigi.Task):
+    @abc.abstractproperty
+    def table(self):
+        pass
+
+    @abc.abstractproperty
+    def output_path(self):
+        pass
+
+    @abc.abstractproperty
+    def columns(self):
+        pass
+
+    output_format = 'parquet'
+
+    def run(self):
+        df = read_sql_df(columns=self.columns, table=self.table)
+        s3_write(df, self.output_format, self.output_path)
+
+    def output(self):
+        return S3Target(self.output_path)
