@@ -74,4 +74,5 @@ class CryptoWatchDailyIngress(DailyIngress):
     def run(self):
         df = read_s3_df(_hourly_output_path.format(CryptoWatchHourlyIngress.name, self.date), 'parquet')
         df['date'] = self.date
+        df = df.drop(['Unnamed: 0', 'level_0'], axis=1)
         self.write(df)
