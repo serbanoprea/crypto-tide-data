@@ -39,12 +39,3 @@ class CryptoTideCron(luigi.WrapperTask):
     def requires(self):
         yield HourlyCron(date_hour=NOW)
         yield DailyCron(date=NOW - timedelta(days=1))
-
-
-class MockBackfillTask(luigi.WrapperTask):
-    def requires(self):
-        return RangeHourly(
-            of=self.dependency,
-            start=datetime.combine(self.date, time.min),
-            stop=datetime.combine(self.date + timedelta(days=1), time.min)
-        )
