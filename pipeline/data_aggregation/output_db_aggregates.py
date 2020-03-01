@@ -97,7 +97,6 @@ class DailyDbAggregatesOutput(luigi.WrapperTask):
     date = luigi.DateParameter()
 
     def requires(self):
-        yield OutputDailyTrends(**self.param_kwargs)
         yield OutputPopulationAggregations(**self.param_kwargs)
 
 
@@ -105,5 +104,6 @@ class HourlyDbAggregatesOutput(luigi.WrapperTask):
     date_hour = luigi.DateHourParameter()
 
     def requires(self):
+        yield OutputDailyTrends(**self.param_kwargs)
         yield OutputHourlyTrends(**self.param_kwargs)
         yield OutputCoinAggregations(**self.param_kwargs)
