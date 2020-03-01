@@ -1,11 +1,10 @@
 from datetime import datetime, time, timedelta
 
 import luigi
-from luigi.tools.range import RangeDaily
+from luigi.tools.range import RangeHourly
 
 from pipeline.common.tasks import DatabaseQuery, TruncateTableQuery
 from pipeline.database.trends_insert import InsertHourlyTrends
-
 
 _config = luigi.configuration.get_config()
 _population_aggregates = _config.get('database', 'population-aggregates-table')
@@ -18,7 +17,7 @@ class EmptyPopulationAggregates(TruncateTableQuery):
     table = _population_aggregates
 
     def requires(self):
-        return RangeDaily(
+        return RangeHourly(
             of=InsertHourlyTrends,
             start=datetime.combine(self.date, time.min),
             stop=datetime.combine(self.date + timedelta(days=1), time.min)
@@ -194,4 +193,3 @@ class InsertCoinAggregates(DatabaseQuery):
                 FROM PopulationAggregation
                 WHERE StDevDayChange IS NOT NULL;
         """.format(coin_aggregates=_coin_aggregates_table, hourly_trends=_hourly_trends_table)
-
