@@ -4,6 +4,7 @@ import luigi
 from luigi.tools.range import RangeHourly
 
 from pipeline.common.tasks import DatabaseQuery, TruncateTableQuery
+from pipeline.database.database_population import InsertHourlyValues
 from pipeline.database.trends_insert import InsertHourlyTrends
 
 _config = luigi.configuration.get_config()
@@ -75,14 +76,14 @@ class EmptyCoinAggregates(TruncateTableQuery):
     table = _coin_aggregates_table
 
     def requires(self):
-        return InsertHourlyTrends(**self.param_kwargs)
+        return InsertHourlyValues(**self.param_kwargs)
 
 
 class InsertCoinAggregates(DatabaseQuery):
     date_hour = luigi.DateHourParameter()
 
-    # def requires(self):
-    #     return EmptyCoinAggregates(**self.param_kwargs)
+    def requires(self):
+        return EmptyCoinAggregates(**self.param_kwargs)
 
     @property
     def sql(self):
