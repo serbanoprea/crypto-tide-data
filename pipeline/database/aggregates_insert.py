@@ -8,7 +8,7 @@ from pipeline.database.trends_insert import InsertHourlyTrends
 
 _config = luigi.configuration.get_config()
 _population_aggregates = _config.get('database', 'population-aggregates-table')
-_hourly_trends_table = _config.get('database', 'hourly-trends-table')
+_hourly_trends_table = _config.get('database', 'values-table')
 _coin_aggregates_table = _config.get('database', 'coin-aggregates-table')
 
 
@@ -81,115 +81,180 @@ class EmptyCoinAggregates(TruncateTableQuery):
 class InsertCoinAggregates(DatabaseQuery):
     date_hour = luigi.DateHourParameter()
 
-    def requires(self):
-        return EmptyCoinAggregates(**self.param_kwargs)
+    # def requires(self):
+    #     return EmptyCoinAggregates(**self.param_kwargs)
 
     @property
     def sql(self):
+        hour = self.date_hour.hour
+        current_date = self.date_hour.date()
+        yesterday = current_date - timedelta(days=1)
+        last_week = current_date - timedelta(days=7)
+        last_month = current_date - timedelta(days=30)
+
         return """
-                WITH DayPerformance AS (
-                    SELECT
-                        CoinId,
-                        Symbol,
-                        AVG(OverallChange) AS AverageDayChange,
-                        SUM(OverallChange) AS SumDayChange,
-                        STDEV(OverallChange) AS StDevDayChange,
-                        COUNT(*) AS DayRecords
-                    FROM {hourly_trends}
-                    WHERE DATEADD(HOUR, Hour, CAST(Date as datetime)) >= DATEADD(HOUR, -24, GETDATE())
-                    GROUP BY CoinId, Symbol
-                ),
-                WeekPerformance AS (	
-                    SELECT
-                        CoinId,
-                        Symbol,
-                        AVG(OverallChange) AS AverageWeekChange,
-                        SUM(OverallChange) AS SumWeekChange,
-                        STDEV(OverallChange) AS StDevWeekChange,
-                        COUNT(*) AS WeekRecords,
-                        1 AS MockGroup
-                    FROM {hourly_trends}
-                    WHERE DATEADD(HOUR, Hour, CAST(Date as datetime)) >= DATEADD(DAY, -7, GETDATE())
-                    GROUP BY CoinId, Symbol
-                ),
-                PopulationAggregation AS (	
-                SELECT
-                    DayPerformance.*,
-                    WeekPerformance.AverageWeekChange,
-                    WeekPerformance.SumWeekChange,
-                    WeekPerformance.WeekRecords,
-                    WeekPerformance.StDevWeekChange,
-                    (StDevWeekChange / AverageWeekChange) AS WeekVolatility,
-                    (StDevDayChange / AverageDayChange) AS DayVolatility,
-                
-                    (CASE WHEN SumDayChange > PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY SumDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanMedianDay,
-                    (CASE WHEN SumDayChange > PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY SumDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThan25PercDay,
-                    (CASE WHEN SumDayChange > PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY SumDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThan75PercDay,	
-                    (CASE WHEN SumDayChange > AVG(SumDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanAverageDay,
-                
-                    (CASE WHEN SumWeekChange > PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY SumWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanMedianWeek,
-                    (CASE WHEN SumWeekChange > PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY SumWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThan25PercWeek,
-                    (CASE WHEN SumWeekChange > PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY SumWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThan75PercWeek,
-                    (CASE WHEN SumWeekChange > AVG(SumWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanAverageWeek,
-                
-                    (CASE WHEN StDevDayChange / AverageDayChange < PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityThan75PercDay,
-                    (CASE WHEN StDevDayChange / AverageDayChange < PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityThan25PercDay,
-                    (CASE WHEN StDevDayChange / AverageDayChange < PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityThanMedianDay,	
-                    (CASE WHEN StDevDayChange / AverageDayChange < AVG(StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanAverageVolatilityDay,
-                    (CASE WHEN StDevDayChange / AverageDayChange = MIN(StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS MinDayVolatility,
-                    (CASE WHEN StDevDayChange / AverageDayChange = MAX(StDevDayChange / AverageDayChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS MaxDayVolatility,
-                
-                    (CASE WHEN StDevWeekChange / AverageWeekChange < PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityThan75PercWeek,
-                    (CASE WHEN StDevWeekChange / AverageWeekChange < PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityThan25PercWeek,
-                    (CASE WHEN StDevWeekChange / AverageWeekChange < PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherVolatilityMedianWeek,
-                    (CASE WHEN StDevWeekChange / AverageWeekChange < AVG(StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS HigherThanAverageVolatilityWeek,
-                    (CASE WHEN StDevWeekChange / AverageWeekChange = MIN(StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS MinWeekVolatility,
-                    (CASE WHEN StDevWeekChange / AverageWeekChange = MAX(StDevWeekChange / AverageWeekChange) OVER (PARTITION BY MockGroup) THEN 1 ELSE 0 END) AS MaxWeekVolatility
-                FROM DayPerformance INNER JOIN WeekPerformance
-                ON DayPerformance.CoinId = WeekPerformance.CoinId AND DayPerformance.Symbol = WeekPerformance.Symbol
-                WHERE AverageWeekChange != 0 AND AverageDayChange != 0
-                )
-                
-                INSERT INTO {coin_aggregates}
-                SELECT
-                    CoinId,
+            WITH CurrentData AS (
+            SELECT
+                *
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) = (DATEADD(HOUR, {hour}, CAST('{current_date}' as datetime)))
+            ),
+            YesterdaysData AS (
+            SELECT
+                CoinId,
+                Price AS Price24HoursAgo
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) = (DATEADD(HOUR, {hour}, CAST('{yesterday}' AS datetime)))
+            ),
+            LastWeeksData AS (
+            SELECT
+                CoinId,
+                Price AS Price1WeekAgo
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) = (DATEADD(HOUR, {hour}, CAST('{last_week}' AS datetime)))
+            ),
+            LastMonthsData AS (
+            SELECT
+                CoinId,
+                Price AS Price1MonthAgo
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) = (DATEADD(HOUR, {hour}, CAST('{last_month}' AS datetime)))
+            ),
+            DataYesterday AS (
+            SELECT
+                CoinId,
+                STDEV(Price) / (CASE WHEN AVG(Price) != 0 THEN AVG(Price) ELSE NULL END) AS YesterdayVolatility
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) >= (DATEADD(HOUR, {hour}, CAST('{yesterday}' AS datetime)))
+            GROUP BY CoinId
+            ),
+            DataLastWeek AS (
+            SELECT
+                CoinId,
+                STDEV(Price) / (CASE WHEN AVG(Price) != 0 THEN AVG(Price) ELSE NULL END) AS LastWeekVolatility
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) >= (DATEADD(HOUR, {hour}, CAST('{last_week}' AS datetime)))
+            GROUP BY CoinId
+            ),
+            DataLastMonth AS (
+            SELECT
+                CoinId,
+                STDEV(Price) / (CASE WHEN AVG(Price) != 0 THEN AVG(Price) ELSE NULL END) AS LastMonthVolatility
+            FROM {values_table}
+            WHERE (DATEADD(HOUR, Hour, CAST(Date as datetime))) >= (DATEADD(HOUR, {hour}, CAST('{last_month}' AS datetime)))
+            GROUP BY CoinId
+            ),
+            PreparedData AS (
+            SELECT CurrentData.CoinId,
                     Symbol,
+                    Price,
+                    YesterdayVolatility,
+                    LastWeekVolatility,
+                    LastMonthVolatility,
+                    (Price / (CASE WHEN Price24HoursAgo != 0 THEN Price24HoursAgo ELSE NULL END) * 100 - 100) AS DayChange,
+                    (Price / (CASE WHEN Price1WeekAgo != 0 THEN Price1WeekAgo ELSE NULL END) * 100 - 100) AS WeekChange,
+                    (Price / (CASE WHEN Price1MonthAgo != 0 THEN Price1MonthAgo ELSE NULL END) * 100 - 100) AS MonthChange
+            FROM (
+                CurrentData
+                    INNER JOIN YesterdaysData ON CurrentData.CoinId = YesterdaysData.CoinId
+                    INNER JOIN LastWeeksData ON CurrentData.CoinId = LastWeeksData.CoinId
+                    INNER JOIN LastMonthsData ON CurrentData.CoinId = LastMonthsData.CoinId
+                    INNER JOIN DataYesterday ON CurrentData.CoinId = DataYesterday.CoinId
+                    INNER JOIN DataLastWeek ON CurrentData.CoinId = DataLastWeek.CoinId
+                    INNER JOIN DataLastMonth ON CurrentData.CoinId = DataLastMonth.CoinId
+                )
+            ),
+            Aggregates AS (
+            SELECT
+                PreparedData.*,
+                (CASE WHEN MIN(YesterdayVolatility) OVER (PARTITION BY 1) = YesterdayVolatility THEN 1 ELSE 0 END) AS Min24hVolatility,
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY YesterdayVolatility) OVER (PARTITION BY 1) > YesterdayVolatility THEN 1 ELSE 0 END) AS Small24hVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY YesterdayVolatility) OVER (PARTITION BY 1) > YesterdayVolatility THEN 1 ELSE 0 END) AS Medium24hVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY YesterdayVolatility) OVER (PARTITION BY 1) > YesterdayVolatility THEN 1 ELSE 0 END) AS High24hVolatility,
+                (CASE WHEN MAX(YesterdayVolatility) OVER (PARTITION BY 1) = YesterdayVolatility THEN 1 ELSE 0 END) AS Max24hVolatility,
+            
+                (CASE WHEN MIN(DayChange) OVER (PARTITION BY 1) = DayChange THEN 1 ELSE 0 END) AS Min24hChange,	
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY DayChange) OVER (PARTITION BY 1) > DayChange THEN 1 ELSE 0 END) AS Small24hChange,
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY DayChange) OVER (PARTITION BY 1) > DayChange THEN 1 ELSE 0 END) AS Medium24hChange,
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY DayChange) OVER (PARTITION BY 1) > DayChange THEN 1 ELSE 0 END) AS High24hChange,
+                (CASE WHEN MAX(DayChange) OVER (PARTITION BY 1) = DayChange THEN 1 ELSE 0 END) AS Max24hChange,
                 
-                    AverageDayChange,
-                    SumDayChange,
-                    StDevDayChange,
-                    DayRecords,
-                    AverageWeekChange,
-                    SumWeekChange,
-                    WeekRecords,
-                    StDevWeekChange,
-                    WeekVolatility,
-                    DayVolatility,
+                (CASE WHEN MIN(LastWeekVolatility) OVER (PARTITION BY 1) = LastWeekVolatility THEN 1 ELSE 0 END) AS MinWeekVolatility,
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY LastWeekVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS SmallWeekVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY LastWeekVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS MediumWeekVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY LastWeekVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS HighWeekVolatility,
+                (CASE WHEN MAX(YesterdayVolatility) OVER (PARTITION BY 1) = LastWeekVolatility THEN 1 ELSE 0 END) AS MaxWeekVolatility,
+            
+                (CASE WHEN MIN(WeekChange) OVER (PARTITION BY 1) = WeekChange THEN 1 ELSE 0 END) AS MinWeekChange,
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY WeekChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS SmallWeekChange,	
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY WeekChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS MediumWeekChange,	
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY WeekChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS HighWeekChange,
+                (CASE WHEN MAX(WeekChange) OVER (PARTITION BY 1) = WeekChange THEN 1 ELSE 0 END) AS MaxWeekChange,
+                    
+                (CASE WHEN MIN(LastMonthVolatility) OVER (PARTITION BY 1) = LastMonthVolatility THEN 1 ELSE 0 END) AS MinMonthVolatility,
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY LastMonthVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS SmallMonthVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY LastMonthVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS MediumMonthVolatility,	
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY LastMonthVolatility) OVER (PARTITION BY 1) > LastWeekVolatility THEN 1 ELSE 0 END) AS HighMonthVolatility,
+                (CASE WHEN MAX(LastMonthVolatility) OVER (PARTITION BY 1) = LastMonthVolatility THEN 1 ELSE 0 END) AS MaxMonthVolatility,
+            
+                (CASE WHEN MIN(MonthChange) OVER (PARTITION BY 1) = MonthChange THEN 1 ELSE 0 END) AS MinMonthChange,
+                (CASE WHEN PERCENTILE_DISC(0.25) WITHIN GROUP (ORDER BY MonthChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS SmallMonthChange,	
+                (CASE WHEN PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY MonthChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS MediumMonthChange,	
+                (CASE WHEN PERCENTILE_DISC(0.75) WITHIN GROUP (ORDER BY MonthChange) OVER (PARTITION BY 1) > WeekChange THEN 1 ELSE 0 END) AS HighMonthChange,
+                (CASE WHEN MAX(MonthChange) OVER (PARTITION BY 1) = MonthChange THEN 1 ELSE 0 END) AS MaxMonthChange
+            FROM PreparedData
+            )
+            
+            
+            INSERT INTO {coin_aggregates}
+            SELECT
+                CoinId,
+                Symbol,
+                Price,
+                DayChange,
+                WeekChange,
+                MonthChange,
+            
+                Min24hVolatility,
+                Small24hVolatility,
+                Medium24hVolatility,
+                High24hVolatility,
+                Max24hVolatility,
+            
+                Min24hChange,
+                Small24hChange,
+                Medium24hChange,
+                High24hChange,
+                Max24hChange,
+            
+                MinWeekVolatility,
+                SmallWeekVolatility,
+                MediumWeekVolatility,
+                HighWeekVolatility,
+                MaxWeekVolatility,
+            
+                MinWeekChange,
+                SmallWeekChange,
+                MediumWeekChange,
+                HighWeekChange,
+                MaxWeekChange,
+            
+                MinMonthChange,
+                SmallMonthChange,
+                MediumMonthChange,
+                HighMonthChange,
+                MaxMonthChange,
                 
-                    HigherThanMedianDay,
-                    HigherThan25PercDay,
-                    HigherThan75PercDay,
-                    HigherThanAverageDay,
-                
-                    HigherThanMedianWeek,
-                    HigherThan25PercWeek,
-                    HigherThan75PercWeek,
-                    HigherThanAverageWeek,
-                
-                    HigherVolatilityThan75PercDay,
-                    HigherVolatilityThan25PercDay,
-                    HigherVolatilityThanMedianDay,
-                    HigherThanAverageVolatilityDay,
-                
-                    HigherVolatilityMedianWeek,
-                    HigherVolatilityThan75PercWeek,
-                    HigherVolatilityThan25PercWeek,
-                
-                    HigherThanAverageVolatilityWeek,
-                    MinWeekVolatility,
-                    MaxWeekVolatility,
-                    MinDayVolatility,
-                    MaxDayVolatility
-                FROM PopulationAggregation
-                WHERE StDevDayChange IS NOT NULL;
-        """.format(coin_aggregates=_coin_aggregates_table, hourly_trends=_hourly_trends_table)
+                MinMonthVolatility,
+                SmallMonthVolatility,
+                MediumMonthVolatility,
+                HighMonthVolatility,
+                MaxMonthVolatility
+            FROM Aggregates;
+        """.format(coin_aggregates=_coin_aggregates_table,
+                   values_table=_hourly_trends_table,
+                   hour=hour,
+                   current_date=current_date,
+                   yesterday=yesterday,
+                   last_week=last_week,
+                   last_month=last_month)
