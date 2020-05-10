@@ -9,7 +9,8 @@ from pipeline.database.trends_insert import InsertHourlyTrends
 
 _config = luigi.configuration.get_config()
 _population_aggregates = _config.get('database', 'population-aggregates-table')
-_hourly_trends_table = _config.get('database', 'values-table')
+_hourly_trends_table = _config.get('database', 'hourly-trends-table')
+_values_table = _config.get('database', 'values-table')
 _coin_aggregates_table = _config.get('database', 'coin-aggregates-table')
 
 
@@ -253,7 +254,7 @@ class InsertCoinAggregates(DatabaseQuery):
                 MaxMonthVolatility
             FROM Aggregates;
         """.format(coin_aggregates=_coin_aggregates_table,
-                   values_table=_hourly_trends_table,
+                   values_table=_values_table,
                    hour=hour,
                    current_date=current_date,
                    yesterday=yesterday,
