@@ -19,7 +19,7 @@ class HourlyCron(luigi.WrapperTask):
     def requires(self):
         yield CryptoWatchResult(**self.param_kwargs)
         yield DatabaseHourly(**self.param_kwargs)
-        yield InsertHourlyTrends(**self.param_kwargs)
+        # yield InsertHourlyTrends(**self.param_kwargs)
         yield InsertCoinAggregates(**self.param_kwargs)
         yield HourlyDbAggregatesOutput(**self.param_kwargs)
 
@@ -31,7 +31,7 @@ class DailyCron(luigi.WrapperTask):
         yield CryptoWatchDailyIngress(**self.param_kwargs)
         yield DatabaseDaily(**self.param_kwargs)
         yield InsertDailyTrends(**self.param_kwargs)
-        yield InsertPopulationAggregates(**self.param_kwargs)
+        # yield InsertPopulationAggregates(**self.param_kwargs)
         yield DailyDbAggregatesOutput(**self.param_kwargs)
 
 
