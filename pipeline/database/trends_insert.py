@@ -2,7 +2,7 @@ import luigi
 
 from pipeline.common.read import read_sql_df
 from pipeline.common.tasks import DatabaseQuery, TruncateTableQuery
-from pipeline.database.database_population import DatabaseHourly, DatabaseDaily
+from pipeline.database.database_population import DatabaseDaily
 
 _config = luigi.configuration.get_config()
 _values_table = _config.get('database', 'values-table')
