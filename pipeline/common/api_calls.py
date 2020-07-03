@@ -6,6 +6,7 @@ import requests
 from luigi.contrib.s3 import S3Target
 
 from pipeline.common.write import s3_write
+from datetime import datetime
 
 _config = luigi.configuration.get_config()
 _output_path = _config.get('api-calls', 'path')
@@ -45,6 +46,18 @@ class ApiCall(luigi.Task):
     def output(self):
         return S3Target(self._out_path)
 
+    def complete(self):
+        current = datetime.now()
+        current_date_hour = datetime(year=current.year, month=current.month, day=current.day, hour=current.hour)
+        diff = (current_date_hour - self.date_hour).seconds
+
+        if diff == 0 and not self.output().exists():
+            return False
+        elif diff != 0 and not self.output().exists():
+            raise ApiCallError('Output not found')
+        else:
+            return True
+
     @property
     def _out_path(self):
         path = _output_path.format(self.name, self.date_hour.date(), self.date_hour.hour)
@@ -82,3 +95,7 @@ class ApiCall(luigi.Task):
             raise Exception('Please provide a valid API format')
 
         return read_methods[api_return_format](self.url)
+
+
+class ApiCallError(Exception):
+    pass
