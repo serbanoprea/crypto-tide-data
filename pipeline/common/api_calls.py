@@ -49,9 +49,12 @@ class ApiCall(luigi.Task):
     def complete(self):
         current = datetime.now()
         current_date_hour = datetime(year=current.year, month=current.month, day=current.day, hour=current.hour)
+        diff = (current_date_hour - self.date_hour).seconds
 
-        if (current_date_hour - self.date_hour).seconds == 0 and not self.output().exists():
+        if diff == 0 and not self.output().exists():
             return False
+        elif diff != 0 and not self.output().exists():
+            raise ApiCallError('Output not found')
         else:
             return True
 
@@ -92,3 +95,7 @@ class ApiCall(luigi.Task):
             raise Exception('Please provide a valid API format')
 
         return read_methods[api_return_format](self.url)
+
+
+class ApiCallError(Exception):
+    pass

@@ -29,15 +29,6 @@ class HourlyIngress(ReadableTask):
             'hour={}/{}.snappy.parquet'.format(self.date_hour.hour, self.name)
         )
 
-    def complete(self):
-        current = datetime.now()
-        current_date_hour = datetime(year=current.year, month=current.month, day=current.day, hour=current.hour)
-
-        if (current_date_hour - self.date_hour).seconds == 0 and not self.input().complete():
-            return False
-        else:
-            return True
-
 
 class DailyIngress(ReadableTask):
     date = luigi.DateParameter()
