@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta
 
 import luigi
-from luigi.tools.range import RangeHourly
 
 from pipeline.data_aggregation.output_db_aggregates import DailyDbAggregatesOutput, HourlyDbAggregatesOutput
 from pipeline.data_collection.api_retrieval import CryptoWatchResult
 from pipeline.data_collection.data_ingress import CryptoWatchDailyIngress
-from pipeline.database.aggregates_insert import InsertPopulationAggregates, InsertCoinAggregates
+from pipeline.database.aggregates_insert import InsertCoinAggregates
 from pipeline.database.database_population import DatabaseHourly, DatabaseDaily
-from pipeline.database.trends_insert import InsertDailyTrends, InsertHourlyTrends
+from pipeline.database.trends_insert import InsertDailyTrends
 
 NOW = datetime.now()
 
