@@ -49,7 +49,7 @@ class ApiCall(luigi.Task):
     def complete(self):
         current = datetime.now()
         current_date_hour = datetime(year=current.year, month=current.month, day=current.day, hour=current.hour)
-        diff = (current_date_hour - self.date_hour).seconds
+        diff = (current_date_hour - self.date_hour).total_seconds()
 
         if diff == 0 and not self.output().exists():
             return False
