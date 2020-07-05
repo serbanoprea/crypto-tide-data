@@ -81,7 +81,11 @@ class ScrapeTopLevel(luigi.Task):
         return S3Target(path)
 
     def read(self):
-        read_s3_df(self.output().path, 'parquet')
+        return pd.read_parquet(self.output().path)
+
+    def on_failure(self, exception):
+        df = pd.DataFrame([['', '', '']], columns=['url', 'scrape_time', 'html', 'content'])
+        s3_write(df, 'parquet', self.output().path)
 
     def _scrape_multiple(self, url, subsections):
         df = None
@@ -118,4 +122,13 @@ class UpdateScrapes(InsertQuery):
     table = 'Scrapes'
 
     def get_data(self):
-        return pd.read_parquet(self.dependency.output().path)[['url', 'scrape_time']]
+        return self.dependency.read()[['url', 'scrape_time']]
+
+    def complete(self):
+        df = self.dependency.read()
+        if df.values[0][1] == '':
+            return True
+        elif df.values[0][1] != '' and not self.output().exists():
+            return False
+        else:
+            return True
