@@ -94,12 +94,14 @@ class ScrapeTopLevel(luigi.Task):
     def _get_not_scraped(self, urls):
         sql_condition = 'SELECT Url FROM {{table}} WHERE Url IN ({})'.format(",".join(["'{}'".format(u) for u in urls]))
 
-        not_scraped = read_sql_df(
+        scraped = read_sql_df(
             columns=['url'],
             table='Scrapes',
-            query=sql_condition)
+            query=sql_condition).values
 
-        return [u for u in urls if u not in not_scraped.values]
+        vals = [v[0] for v in scraped]
+
+        return [u for u in urls if u not in vals]
 
     def _get_chunks(self, html):
         parsed = BeautifulSoup(html, features="html.parser")
