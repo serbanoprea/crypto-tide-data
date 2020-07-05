@@ -84,7 +84,7 @@ class ScrapeTopLevel(luigi.Task):
         return pd.read_parquet(self.output().path)
 
     def on_failure(self, exception):
-        df = pd.DataFrame([['', '', '']], columns=['url', 'scrape_time', 'html', 'content'])
+        df = pd.DataFrame([['', '', '', '']], columns=['url', 'scrape_time', 'html', 'content'])
         s3_write(df, 'parquet', self.output().path)
 
     def _scrape_multiple(self, url, subsections):
