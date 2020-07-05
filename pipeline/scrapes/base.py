@@ -125,7 +125,11 @@ class UpdateScrapes(InsertQuery):
         return self.dependency.read()[['url', 'scrape_time']]
 
     def complete(self):
-        df = self.dependency.read()
+        try:
+            df = self.dependency.read()
+        except PermissionError:
+            return False
+
         if df.values[0][1] == '':
             return True
         elif df.values[0][1] != '' and not self.output().exists():
