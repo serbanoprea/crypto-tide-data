@@ -136,7 +136,7 @@ class UpdateScrapes(InsertQuery):
             table='BaseScrapes',
             query='SELECT Url FROM Scrapes WHERE Url IN ({})'.format(','.join(["'{}'".format(url) for url in urls])))
 
-        return len([url for url in urls if url not in scrapes_table['url'].values]) == 0
+        return len(scrapes_table) > 0 and len([url for url in urls if url not in scrapes_table['url'].values]) == 0
 
     def complete(self):
         try:
