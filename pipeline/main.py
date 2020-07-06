@@ -36,5 +36,5 @@ class DailyCron(luigi.WrapperTask):
 
 class CryptoTideCron(luigi.WrapperTask):
     def requires(self):
-        yield HourlyCron(date_hour=NOW - timedelta(hours=1))
+        yield HourlyCron(date_hour=NOW)
         yield DailyCron(date=NOW - timedelta(days=1))
