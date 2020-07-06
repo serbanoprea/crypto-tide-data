@@ -29,7 +29,7 @@ class ScrapeAmbCrypto(ScrapeTopLevel):
     def url_filter_condition(cls, href):
         site_specific = ['facebook', 'twitter', 'pinterest', 'instagram', 'youtube', 'linkedin', 'about', 'authors',
                          'job-openings', 'advertise-with-us', 'contact-us', 'terms-and-conditions', 'privacy-policy',
-                         'page', '#']
+                         'page', '#', 'ambcrypto.com/partners', 'category']
         return href != '/' and not any([p in href for p in site_specific])
 
     def transform_content(self, content):
