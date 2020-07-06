@@ -35,7 +35,7 @@ class ScrapeTopLevel(luigi.Task):
     @classmethod
     def format_urls(cls, urls, base_url):
         return list(set([base_url + p.strip('/') if base_url not in p.strip('/') else p.strip('/')
-                             for p in urls if cls.url_filter_condition(p)]))
+                         for p in urls if cls.url_filter_condition(p)]))
 
     def scrape_top_level(self, url):
         html = urllib.request.urlopen(url).read()
@@ -57,7 +57,8 @@ class ScrapeTopLevel(luigi.Task):
             html = urllib.request.urlopen(url).read()
 
             chunks = self._get_chunks(html)
-            row = [url, datetime.now().isoformat(), html, self.transform_content('\n'.join(chunk for chunk in chunks if chunk))]
+            row = [url, datetime.now().isoformat(), html,
+                   self.transform_content('\n'.join(chunk for chunk in chunks if chunk))]
             data_frame = pd.DataFrame([row], columns=['url', 'scrape_time', 'html', 'content'])
             df = data_frame if df is None else pd.concat([df, data_frame], axis=0)
 
@@ -84,7 +85,7 @@ class ScrapeTopLevel(luigi.Task):
         return pd.read_parquet(self.output().path)
 
     def on_failure(self, exception):
-        df = pd.DataFrame([['', '', '', '']], columns=['url', 'scrape_time', 'html', 'content'])
+        df = pd.DataFrame([[None, None, None, None]], columns=['url', 'scrape_time', 'html', 'content'])
         s3_write(df, 'parquet', self.output().path)
 
     def _scrape_multiple(self, url, subsections):
@@ -96,16 +97,13 @@ class ScrapeTopLevel(luigi.Task):
         return df
 
     def _get_not_scraped(self, urls):
-        sql_condition = 'SELECT Url FROM {{table}} WHERE Url IN ({})'.format(",".join(["'{}'".format(u) for u in urls]))
+        cols = get_table_columns('Scrapes')
 
         scraped = read_sql_df(
-            columns=['url'],
-            table='Scrapes',
-            query=sql_condition).values
+            columns=cols,
+            table='Scrapes')
 
-        vals = [v[0] for v in scraped]
-
-        return [u for u in urls if u not in vals]
+        return [u for u in urls if u not in set(scraped['url'])]
 
     def _get_chunks(self, html):
         parsed = BeautifulSoup(html, features="html.parser")
@@ -122,7 +120,10 @@ class UpdateScrapes(InsertQuery):
     table = 'Scrapes'
 
     def get_data(self):
-        return self.dependency.read()[['url', 'scrape_time']]
+        df = self.dependency.read()[['url', 'scrape_time']]
+        df['formatted_date'] = '{date:%Y-%m-%d %H:%M:%S}'.format(date=df['scrape_time'])
+        df['scrape_time'] = df['formatted_date']
+        return df[['url', 'scrape_time']]
 
     def complete(self):
         try:
@@ -130,9 +131,9 @@ class UpdateScrapes(InsertQuery):
         except PermissionError:
             return False
 
-        if df.values[0][1] == '':
+        if df.values[0][1] is None:
             return True
-        elif df.values[0][1] != '' and not self.output().exists():
+        elif df.values[0][1] is not None and not self.output().exists():
             return False
         else:
             return True
