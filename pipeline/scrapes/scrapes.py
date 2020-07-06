@@ -40,7 +40,7 @@ class ScrapeCoinTelegraph(ScrapeTopLevel):
     source = 'cointelegraph'
 
     def url_filter_condition(cls, href):
-        site_specific = ['price-index', 'authors', 'youtube', 'advertise-with-bitcoins', 'login', 'careers', 'tags']
+        site_specific = ['price-index', 'authors', 'youtube', 'advertise-with-bitcoins', 'login', 'careers', 'tags', '#']
         return href != '/' and not any([p in href for p in site_specific])
 
     def format_urls(cls, urls, base_url):
