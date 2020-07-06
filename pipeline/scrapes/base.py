@@ -1,5 +1,6 @@
 import abc
 import urllib.request
+import dateutil.parser
 from datetime import datetime
 
 import luigi
@@ -121,9 +122,13 @@ class UpdateScrapes(InsertQuery):
 
     def get_data(self):
         df = self.dependency.read()[['url', 'scrape_time']]
-        df['formatted_date'] = '{date:%Y-%m-%d %H:%M:%S}'.format(date=df['scrape_time'])
+        df['formatted_date'] = df['scrape_time'].apply(self._format_date)
         df['scrape_time'] = df['formatted_date']
         return df[['url', 'scrape_time']]
+
+    def _format_date(self, date):
+        parsed_date = dateutil.parser.parse(date)
+        return '{date:%Y-%m-%d %H:%M:%S}'.format(date=parsed_date)
 
     def complete(self):
         try:
