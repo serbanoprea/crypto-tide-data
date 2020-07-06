@@ -121,21 +121,17 @@ class ScrapeTopLevel(luigi.Task):
 class UpdateScrapes(InsertQuery):
     table = 'Scrapes'
 
+    number_of_batches = 1
+
     def get_data(self):
         df = self.dependency.read()[['url', 'scrape_time']]
         df['formatted_date'] = df['scrape_time'].apply(self._format_date)
         df['scrape_time'] = df['formatted_date']
-
-        df['hashed_url'] = df['url'].apply(self._apply_hash)
-        df['url'] = df['hashed_url']
         return df[['url', 'scrape_time']]
 
     def _format_date(self, date):
         parsed_date = dateutil.parser.parse(date)
         return '{date:%Y-%m-%d %H:%M:%S}'.format(date=parsed_date)
-
-    def _apply_hash(self, url):
-        return hashlib.md5(url.encode()).hexdigest()
 
     def _check_url_presence(self, urls):
         scrapes_table = read_sql_df(
