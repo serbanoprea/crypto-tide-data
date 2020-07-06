@@ -130,6 +130,14 @@ class UpdateScrapes(InsertQuery):
         parsed_date = dateutil.parser.parse(date)
         return '{date:%Y-%m-%d %H:%M:%S}'.format(date=parsed_date)
 
+    def _check_url_presence(self, urls):
+        scrapes_table = read_sql_df(
+            columns=['url'],
+            table='BaseScrapes',
+            query='SELECT Url FROM Scrapes WHERE Url IN ({})'.format(','.join(["'{}'".format(url) for url in urls])))
+
+        return len([url for url in urls if url not in scrapes_table['url'].values]) == 0
+
     def complete(self):
         try:
             df = self.dependency.read()
@@ -139,6 +147,6 @@ class UpdateScrapes(InsertQuery):
         if df.values[0][1] is None:
             return True
         elif df.values[0][1] is not None and not self.output().exists():
-            return False
+            return self._check_url_presence(df['url'].values)
         else:
             return True
